@@ -1,8 +1,8 @@
 // backend/prisma/schema.prisma
 
-// Pastikan Anda sudah mengatur datasource PostgreSQL di .env
 datasource db {
   provider = "postgresql"
+  // Properti 'url' dipindahkan ke prisma.config.ts
 }
 
 generator client {
@@ -21,14 +21,14 @@ model Admin {
 // --- Model CompanyProfile (Data Utama) ---
 model CompanyProfile {
   id          Int      @id @default(autoincrement())
-  name        String   @unique // Hanya boleh ada satu baris profil
+  name        String   @unique 
   tagline     String?
   description String
   address     String?
   phone       String?
   email       String?
   vision      String?
-  mission     String[] // Array teks untuk list misi
+  mission     String[] 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -38,8 +38,8 @@ model Service {
   id          Int      @id @default(autoincrement())
   title       String
   description String
-  icon        String   // Nama Icon, seperti 'CodeBracketIcon'
-  order       Int      @default(0) // Untuk urutan tampilan layanan
+  icon        String   
+  order       Int      @default(0) 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

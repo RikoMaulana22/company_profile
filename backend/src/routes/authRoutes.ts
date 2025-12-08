@@ -1,16 +1,14 @@
 // backend/src/routes/authRoutes.ts
 
 import { Router } from 'express';
-import * as authController from '../controllers/authController.js';
+import { login, register, getAdminProfile } from '../controllers/authController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = Router();
 
-// Rute POST /api/auth/login
-// Akan digunakan oleh frontend untuk mengirim email dan password
-router.post('/login', authController.login);
+router.post('/login', login);
+router.post('/register', register); 
 
-// Rute POST /api/auth/register
-// Digunakan hanya sekali untuk membuat user admin pertama
-router.post('/register', authController.register); 
+router.get('/profile', protect, getAdminProfile); 
 
 export default router;

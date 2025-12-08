@@ -1,13 +1,12 @@
-// backend/src/index.ts (Perubahan)
+// backend/src/index.ts
 
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
-import 'dotenv/config'; // ✅ PENTING: Untuk memuat variabel lingkungan (.env)
+import 'dotenv/config'; 
 import prisma from './lib/prisma.js';
 
-// Import Router yang baru dibuat
 import authRoutes from './routes/authRoutes.js';
-import companyRoutes from './routes/companyRoutes.js'; // Rute akan dibuat di langkah selanjutnya
+import companyRoutes from './routes/companyRoutes.js'; 
 
 let server: any = null;
 
@@ -16,49 +15,71 @@ const app = express();
 
 // --- Middleware ---
 app.use(express.json());
+
+const allowedOrigins = [
+    'http://localhost:3000', 
+    process.env.FRONTEND_URL 
+];
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) { 
+            return callback(null, true);
+        }
+        return callback(new Error('Kebijakan CORS melarang akses dari Origin ini.'), false);
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true,
 }));
 
 // -------------------------------
-// Fungsi Utama
+// Fungsi Utama (main)
 // -------------------------------
 async function main() {
     try {
-        // Connect to database
         await prisma.$connect();
         console.log('💾 Database connected successfully.');
 
-        // -------------------------------
         // ROUTES INTEGRATION
-        // -------------------------------
-
-        // Root Endpoint
         app.get('/', (req: Request, res: Response) => {
             res.status(200).json({
                 message: 'Welcome to Company Profile API!',
                 databaseStatus: 'Connected',
+                version: '1.0.1' 
             });
         });
 
-        // ✅ Integrasi Rute Modul
         app.use('/api/auth', authRoutes);
-        app.use('/api', companyRoutes); // Menggunakan /api sebagai prefix
+        app.use('/api', companyRoutes);
 
-        // -------------------------------\r\n
         // STARTING SERVER
-        // -------------------------------\r\n
         server = app.listen(PORT, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
         });
 
     } catch (error) {
-        // ... (Error handling tetap sama) ...
         console.error('❌ Failed to start server or connect DB:', error);
+        await prisma.$disconnect(); 
         process.exit(1);
     }
 }
 
-// ... (Proses shutdown tetap sama) ...
+// Handler untuk mematikan server secara graceful (Graceful Shutdown)
+const gracefulShutdown = async () => {
+    console.log('\n🚪 Menerima sinyal penutupan. Mematikan server...');
+    if (server) {
+        server.close(async () => {
+            console.log('🛑 Server dihentikan.');
+            await prisma.$disconnect();
+            console.log('👋 Koneksi database diputus.');
+            process.exit(0);
+        });
+    } else {
+        await prisma.$disconnect();
+        process.exit(0);
+    }
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
 main();

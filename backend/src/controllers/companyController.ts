@@ -2,19 +2,22 @@
 
 import type { Request, Response } from 'express';
 import prisma from '../lib/prisma.js';
+import type { AuthRequest } from '../middleware/authMiddleware.js';
 
-// =======================================================
-// GET /api/profile
-// Mengambil data profil perusahaan (untuk halaman publik)
-// =======================================================
 export const getCompanyProfile = async (req: Request, res: Response) => {
     try {
-        // Ambil data profil pertama (karena hanya ada satu baris data profil)
         const profile = await prisma.companyProfile.findFirst();
 
         if (!profile) {
-            // Jika belum ada data, kembalikan 404 atau data default kosong
-            return res.status(404).json({ message: 'Data profil perusahaan belum diinisialisasi.' });
+            return res.status(200).json({
+                message: 'Data profil perusahaan belum diinisialisasi.',
+                id: 0, 
+                name: 'Nama Perusahaan', tagline: 'Tagline Perusahaan', 
+                description: 'Deskripsi singkat...', address: '', phone: '', 
+                email: '', vision: '', mission: [], 
+                createdAt: new Date().toISOString(), 
+                updatedAt: new Date().toISOString()
+            });
         }
 
         res.status(200).json(profile);
@@ -24,44 +27,42 @@ export const getCompanyProfile = async (req: Request, res: Response) => {
     }
 };
 
-// =======================================================
-// PUT /api/profile (Dilindungi oleh protect middleware)
-// Memperbarui data profil perusahaan
-// =======================================================
-export const updateCompanyProfile = async (req: Request, res: Response) => {
-    // Ambil semua data yang diizinkan untuk diperbarui dari body request
+export const updateCompanyProfile = async (req: AuthRequest, res: Response) => {
     const { name, tagline, description, address, phone, email, vision, mission } = req.body;
     
-    // Asumsi: Kita mencari atau membuat baris data profil pertama
-    let profile = await prisma.companyProfile.findFirst();
+    if (!name || !description) {
+         return res.status(400).json({ message: 'Nama dan Deskripsi perusahaan harus diisi.' });
+    }
 
     try {
+        let profile = await prisma.companyProfile.findFirst();
+        
+        const formatMission = (m: any) => {
+            if (Array.isArray(m)) return m;
+            if (typeof m === 'string' && m.trim() !== '') return m.split('\n').map(item => item.trim()).filter(item => item.length > 0);
+            return [];
+        };
+
+        const dataToUpdate = {
+            name,
+            tagline: tagline || null,
+            description,
+            address: address || null,
+            phone: phone || null,
+            email: email || null,
+            vision: vision || null,
+            mission: formatMission(mission),
+        };
+
+
         if (!profile) {
-            // Jika tidak ada data, buat baru (Inisialisasi)
-            profile = await prisma.companyProfile.create({
-                data: {
-                    name, tagline, description, address, phone, email, vision,
-                    // Pastikan mission adalah array, walaupun dari form mungkin string
-                    mission: Array.isArray(mission) ? mission : (mission ? mission.split('\n') : [])
-                },
-            });
+            profile = await prisma.companyProfile.create({ data: dataToUpdate });
             return res.status(201).json({ message: 'Profil berhasil diinisialisasi.', data: profile });
         }
 
-        // Jika sudah ada, lakukan update
         const updatedProfile = await prisma.companyProfile.update({
-            where: { id: profile.id },
-            data: {
-                name,
-                tagline,
-                description,
-                address,
-                phone,
-                email,
-                vision,
-                // Pastikan mission adalah array, atau split jika berupa string
-                mission: Array.isArray(mission) ? mission : (mission ? mission.split('\n') : [])
-            },
+            where: { id: profile.id }, 
+            data: dataToUpdate,
         });
 
         res.status(200).json({ message: 'Profil berhasil diperbarui.', data: updatedProfile });

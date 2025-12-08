@@ -1,13 +1,12 @@
-// prisma.config.ts
-import 'dotenv/config';
-import { defineConfig, env } from 'prisma/config';
+import { defineConfig } from "@prisma/config";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export default defineConfig({
-  schema: 'prisma/schema.prisma',
-  migrations: {
-    path: 'prisma/migrations',
-  },
   datasource: {
-    url: env('DATABASE_URL'),
+    // provider: "postgresql" | "mysql" | "sqlite" | etc
+       url: process.env.DATABASE_URL!, // ensure DATABASE_URL is set in .env
+
   },
 });
