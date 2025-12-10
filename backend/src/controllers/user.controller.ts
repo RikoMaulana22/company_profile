@@ -1,36 +1,42 @@
-// company-profile-app/backend/src/controllers/user.controller.ts
-
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
 import prisma from '../lib/prisma';
 
-// Mendapatkan detail pengguna (Hanya admin atau pengguna itu sendiri)
-export const getUserProfile = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  const userId = req.params.id; // ID pengguna yang diminta
-  const currentUserId = req.user?.id; // ID pengguna yang sedang login
-  const currentUserRole = req.user?.role;
+// Mendapatkan detail admin
+export const getUserProfile = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const userId = Number(req.params.id); // ubah string → number
+  const currentUserId = req.user?.id;
+  const currentUserRole = req.user?.role; // jika tidak ada role, hapus akses role
 
-  // Logika Placeholder: Mengambil data pengguna dari database
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    const admin = await prisma.admin.findUnique({
+      where: { id: userId },   // id harus number
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true
+        // name: false (tidak ada di schema)
+        // role: false (tidak ada di schema)
+      },
     });
 
-    if (!user) {
-      return res.status(404).json({ message: 'Pengguna tidak ditemukan.' });
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin tidak ditemukan.' });
     }
 
-    // Hanya izinkan jika Admin atau ID cocok
-    if (currentUserRole !== 'admin' && currentUserId !== userId) {
-        return res.status(403).json({ message: 'Akses terlarang.' });
+    // Kalau tidak ada role, gunakan logika yang aman:
+    if (currentUserId !== userId) {
+      return res.status(403).json({ message: 'Akses ditolak.' });
     }
 
-    return res.status(200).json(user);
+    return res.status(200).json(admin);
 
   } catch (error) {
     next(error);
   }
 };
-
-// ... Tambahkan fungsi lain seperti updateUserProfile, deleteUser, dll.

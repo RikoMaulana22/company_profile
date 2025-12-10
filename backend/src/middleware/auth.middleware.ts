@@ -5,8 +5,8 @@ import { Request, Response, NextFunction } from 'express';
 // Definisi Interface untuk Request yang sudah diautentikasi (opsional)
 export interface AuthenticatedRequest extends Request {
   user?: {
-    id: string;
-    role: 'admin' | 'user'; // Asumsi role pengguna
+    id: number;
+    role: string; // Asumsi role pengguna
   };
 }
 
@@ -25,7 +25,7 @@ export const authenticate = (req: AuthenticatedRequest, res: Response, next: Nex
     const mockUserPayload = { id: 'user-123', role: 'user' }as const;; 
     
     // Simpan payload pengguna ke objek request
-    req.user = mockUserPayload;
+    req.user = { id: 123, role: 'user' };
     
     next(); // Lanjut ke controller/middleware berikutnya
 
