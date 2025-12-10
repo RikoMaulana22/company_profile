@@ -1,12 +1,10 @@
-// backend/src/index.ts
+// company-profile-app/backend/src/index.ts
 
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import 'dotenv/config'; 
-import prisma from './lib/prisma.js';
-
-import authRoutes from './routes/authRoutes.js';
-import companyRoutes from './routes/companyRoutes.js'; 
+import prisma from './lib/prisma'; // Menggunakan lib/prisma yang sudah dibuat (aman hot-reload)
+import mainRouter from './routes'; // Router pusat
 
 let server: any = null;
 
@@ -16,13 +14,19 @@ const app = express();
 // --- Middleware ---
 app.use(express.json());
 
+// Konfigurasi CORS
 const allowedOrigins = [
     'http://localhost:3000', 
-    process.env.FRONTEND_URL 
+    process.env.FRONTEND_URL || '', // Tambahkan fallback string kosong
 ];
+
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) { 
+        // Izinkan request tanpa origin (misal Postman/cURL)
+        if (!origin) return callback(null, true);
+        
+        // Cek apakah origin termasuk yang diizinkan
+        if (allowedOrigins.includes(origin)) { 
             return callback(null, true);
         }
         return callback(new Error('Kebijakan CORS melarang akses dari Origin ini.'), false);
@@ -36,22 +40,26 @@ app.use(cors({
 // -------------------------------
 async function main() {
     try {
+        // Cek koneksi database
         await prisma.$connect();
         console.log('💾 Database connected successfully.');
 
-        // ROUTES INTEGRATION
+        // --- ROUTES INTEGRATION ---
+        
+        // Root Endpoint untuk pengecekan server
         app.get('/', (req: Request, res: Response) => {
             res.status(200).json({
                 message: 'Welcome to Company Profile API!',
                 databaseStatus: 'Connected',
-                version: '1.0.1' 
+                version: '1.0.1',
+                serverTime: new Date().toISOString()
             });
         });
 
-        app.use('/api/auth', authRoutes);
-        app.use('/api', companyRoutes);
+        // Register Main Router
+        app.use('/api', mainRouter); // Semua rute API di bawah prefix /api
 
-        // STARTING SERVER
+        // --- STARTING SERVER ---
         server = app.listen(PORT, () => {
             console.log(`🚀 Server running at http://localhost:${PORT}`);
         });
@@ -63,7 +71,9 @@ async function main() {
     }
 }
 
-// Handler untuk mematikan server secara graceful (Graceful Shutdown)
+// -------------------------------
+// Graceful Shutdown
+// -------------------------------
 const gracefulShutdown = async () => {
     console.log('\n🚪 Menerima sinyal penutupan. Mematikan server...');
     if (server) {
@@ -79,7 +89,8 @@ const gracefulShutdown = async () => {
     }
 };
 
-process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
+process.on('SIGTERM', gracefulShutdown);    
 
-main();
+
+main(); // Jalankan aplikasi

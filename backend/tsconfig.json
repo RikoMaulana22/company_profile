@@ -1,46 +1,40 @@
+// company-profile-app/backend/tsconfig.json (SETELAH DIPERBAIKI)
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
-
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
-
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-
-    // Stricter Typechecking Options
+   
+    "outDir": "./dist",
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    /* 2. Module & Environment (CommonJS) */
+    "target": "ES2020", // Cukup stabil
+    "module": "CommonJS", // PENTING: Kembali ke CommonJS
+    "moduleResolution": "node", // PENTING: Kembali ke Node (legacy/CJS)
+    
+    "jsx": "react-jsx", // Dipertahankan jika Anda punya file .tsx
+    
+    /* 3. Strictness & Isolation */
+    "strict": true, 
+    "isolatedModules": true, // Dipertahankan, baik untuk build/bundle
+    "esModuleInterop": true, // Tetap gunakan, ini membantu impor CJS
+    
+    // Fitur strictness yang baik, dipertahankan:
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    "noUncheckedSideEffectImports": true, 
+    "verbatimModuleSyntax": false, // Nonaktifkan karena tidak relevan di CJS
 
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-    "skipLibCheck": true,
+    /* 4. Output & Source Maps */
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src/**/*.ts", "prisma.config.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
