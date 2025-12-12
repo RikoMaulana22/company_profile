@@ -1,52 +1,56 @@
-// company-profile-app/backend/src/controllers/company.controller.ts
-
-import { Request, Response, NextFunction } from 'express';
+// backend/src/controllers/company.controller.ts
+import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
+import type { AuthRequest } from '../middleware/auth.middleware';
 
-// Mendapatkan data profil perusahaan (Publik)
-export const getCompanyProfile = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Logika Placeholder: Asumsi hanya ada satu row profil perusahaan (ID: 1)
-    const company = await prisma.companyProfile.findUnique({
-      where: { id: 1 },
-    });
-
-    if (!company) {
-      return res.status(404).json({ message: 'Data profil perusahaan belum diatur.' });
+export const getCompanyProfile = async (req: Request, res: Response) => {
+    try {
+        // Asumsi kita hanya punya 1 row profil perusahaan, kita ambil yang pertama
+        const company = await prisma.companyProfile.findFirst();
+        
+        if (!company) {
+            // Jika belum ada data sama sekali
+            return res.status(200).json({ 
+                name: 'Nama Perusahaan', 
+                description: '',
+                vision: '', 
+                mission: '', 
+                email: '', 
+                phone: '', 
+                address: '' 
+            });
+        }
+        return res.status(200).json(company);
+    } catch (error) {
+        console.error('Get Company Profile Error:', error);
+        return res.status(500).json({ message: 'Gagal memuat profil perusahaan.' });
     }
-
-    return res.status(200).json(company);
-  } catch (error) {
-    next(error);
-  }
 };
 
-// Memperbarui data profil perusahaan (Hanya Admin)
-export const updateCompanyProfile = async (req: Request, res: Response, next: NextFunction) => {
-  const { name, address, phone, mission } = req.body;
+export const updateCompanyProfile = async (req: AuthRequest, res: Response) => {
+    const { name, description, vision, mission, email, phone, address } = req.body;
 
-  try {
-    const updatedCompany = await prisma.companyProfile.update({
-      where: { id: 1 },
-      data: { name, address, phone, mission }, // Data yang bisa diperbarui
-    });
+    try {
+        // Cek apakah data sudah ada
+        const existingProfile = await prisma.companyProfile.findFirst();
 
-    return res.status(200).json({ 
-        message: 'Profil perusahaan berhasil diperbarui.',
-        data: updatedCompany 
-    });
-  } catch (error) {
-    if (
-        error && // Cek apakah error bukan null/undefined
-        typeof error === 'object' && // Cek apakah error adalah objek
-        'code' in error && // Cek apakah properti 'code' ada di objek error
-        typeof (error as { code: unknown }).code === 'string' // Cek apakah 'code' bertipe string
-    ) {
-    // Cek apakah error karena ID 1 belum ada (jika demikian, lakukan CREATE)
-    if (error.code === 'P2025') { 
-        return res.status(404).json({ message: 'Data profil perusahaan tidak ditemukan. Coba CREATE pertama.' });
+        let result;
+        if (existingProfile) {
+            // Update jika ada
+            result = await prisma.companyProfile.update({
+                where: { id: existingProfile.id },
+                data: { name, vision, mission, email, phone, address }
+            });
+        } else {
+            // Create baru jika belum ada
+            result = await prisma.companyProfile.create({
+                data: { name, description, vision, mission, email, phone, address }
+            });
+        }
+
+        return res.status(200).json({ message: 'Profil perusahaan berhasil disimpan.', data: result });
+    } catch (error) {
+        console.error('Update Company Profile Error:', error);
+        return res.status(500).json({ message: 'Gagal menyimpan profil perusahaan.' });
     }
-    next(error);
-  }
-}
 };

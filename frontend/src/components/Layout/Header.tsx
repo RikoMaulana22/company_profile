@@ -1,7 +1,19 @@
-// frontend/src/components/Layout/Header.tsx
+'use client'; 
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation'; // 2. Import hook
 
 export default function Header() {
+  const pathname = usePathname(); // 3. Dapatkan path saat ini
+
+  // 4. Logika Pengecualian:
+  // Jika path dimulai dengan '/admin', jangan render apa pun (return null)
+  // Kecuali Anda ingin header tetap muncul di halaman login, Anda bisa menyesuaikan kondisinya.
+  // Di sini saya asumsikan SEMUA halaman di bawah /admin (termasuk dashboard) tidak butuh header ini.
+  if (pathname?.startsWith('/admin')) {
+    return null;
+  }
+
   const navItems = [
     { name: 'Beranda', href: '/' },
     { name: 'Profil', href: '/profile' },

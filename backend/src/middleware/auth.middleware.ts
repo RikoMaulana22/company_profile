@@ -1,36 +1,36 @@
-// company-profile-app/backend/src/middlewares/auth.middleware.ts
-
+// backend/src/middleware/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 
-// Definisi Interface untuk Request yang sudah diautentikasi (opsional)
-export interface AuthenticatedRequest extends Request {
+const JWT_SECRET = process.env.JWT_SECRET || 'rahasia-default-dev';
+
+// Pastikan di-EXPORT agar bisa dipakai di controller
+export interface AuthRequest extends Request {
   user?: {
     id: number;
-    role: string; // Asumsi role pengguna
+    email: string;
+    // Hapus 'role' jika di schema Admin Anda tidak ada kolom role
+    // role: string; 
   };
 }
 
-export const authenticate = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  // 1. Dapatkan token dari header (Bearer Token)
-  const authHeader = req.headers.authorization;
+export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token) {
     return res.status(401).json({ message: 'Akses ditolak. Token tidak ditemukan.' });
   }
 
-  const token = authHeader.split(' ')[1];
-
   try {
-    // PURELY A PLACEHOLDER: Ganti dengan logika verifikasi JWT yang sesungguhnya (misalnya menggunakan jsonwebtoken)
-    const mockUserPayload = { id: 'user-123', role: 'user' }as const;; 
-    
-    // Simpan payload pengguna ke objek request
-    req.user = { id: 123, role: 'user' };
-    
-    next(); // Lanjut ke controller/middleware berikutnya
-
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: number; email: string };
+    req.user = decoded;
+    next();
   } catch (error) {
-    // Jika token tidak valid
-    res.status(401).json({ message: 'Token tidak valid atau kadaluarsa.' });
+    return res.status(403).json({ message: 'Token tidak valid atau kedaluwarsa.' });
   }
 };
+
+// Ekspor alias agar kompatibel dengan file lain yang mungkin mengimport dengan nama berbeda
+export type AuthenticatedRequest = AuthRequest; 
+export const authenticate = authenticateToken; 

@@ -1,18 +1,18 @@
-// backend/src/controllers/serviceController.ts (PERBAIKAN FINAL)
-
+// backend/src/controllers/service.controller.ts
 import type { Request, Response } from 'express';
-import prisma from '../lib/prisma.js';
-import type { AuthRequest } from '../middleware/auth.middleware.js';
+import { Prisma } from '@prisma/client';
+import prisma from '../lib/prisma';
+import type { AuthRequest } from '../middleware/auth.middleware';
 
 export const getAllServices = async (req: Request, res: Response) => {
     try {
         const services = await prisma.service.findMany({
             orderBy: { order: 'asc' },
         });
-        res.status(200).json(services);
+        return res.status(200).json(services);
     } catch (error) {
-        console.error('Error retrieving services:', error);
-        res.status(500).json({ message: 'Gagal mengambil data layanan.' });
+        console.error('Get Services Error:', error);
+        return res.status(500).json({ message: 'Gagal mengambil data layanan.' });
     }
 };
 
@@ -20,8 +20,11 @@ export const createService = async (req: AuthRequest, res: Response) => {
     const { title, description, icon, order } = req.body;
 
     if (!title || !description || !icon) {
-        return res.status(400).json({ message: 'Judul, deskripsi, dan ikon harus diisi.' });
+        return res.status(400).json({ message: 'Field title, description, dan icon wajib diisi.' });
     }
+
+    // Konversi order ke integer aman
+    const orderInt = order ? parseInt(String(order), 10) : 0;
 
     try {
         const newService = await prisma.service.create({
@@ -29,66 +32,65 @@ export const createService = async (req: AuthRequest, res: Response) => {
                 title,
                 description,
                 icon,
-                order: order !== undefined ? parseInt(order as string) || 0 : 0, 
+                order: isNaN(orderInt) ? 0 : orderInt,
             },
         });
-        res.status(201).json({ message: 'Layanan berhasil ditambahkan.', data: newService });
+        return res.status(201).json({ message: 'Layanan berhasil dibuat.', data: newService });
     } catch (error) {
-        console.error('Error creating service:', error);
-        res.status(500).json({ message: 'Gagal membuat layanan baru.' });
+        console.error('Create Service Error:', error);
+        return res.status(500).json({ message: 'Gagal membuat layanan baru.' });
     }
 };
 
 export const updateService = async (req: AuthRequest, res: Response) => {
-    // PERBAIKAN: Menggunakan Non-null Assertion Operator (!)
-    const id = req.params.id!;
-    const serviceId = parseInt(id);
+    const { id } = req.params;
+    const serviceId = parseInt(id || '', 10);
 
     if (isNaN(serviceId)) {
-         return res.status(400).json({ message: 'ID layanan tidak valid.' });
+        return res.status(400).json({ message: 'ID layanan tidak valid.' });
     }
 
     const { title, description, icon, order } = req.body;
+    
+    // Bangun objek data update secara dinamis
+    const updateData: any = {};
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (icon !== undefined) updateData.icon = icon;
+    if (order !== undefined) {
+        const parsedOrder = parseInt(String(order), 10);
+        updateData.order = isNaN(parsedOrder) ? 0 : parsedOrder;
+    }
 
     try {
         const updatedService = await prisma.service.update({
             where: { id: serviceId },
-            data: {
-                ...(title && { title }),
-                ...(description && { description }),
-                ...(icon && { icon }),
-                ...(order !== undefined && { order: parseInt(order as string) || 0 }),
-            },
+            data: updateData,
         });
-        res.status(200).json({ message: 'Layanan berhasil diperbarui.', data: updatedService });
+        return res.status(200).json({ message: 'Layanan diperbarui.', data: updatedService });
     } catch (error) {
-        if ((error as any).code === 'P2025') {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ message: 'Layanan tidak ditemukan.' });
         }
-        console.error('Error updating service:', error);
-        res.status(500).json({ message: 'Gagal memperbarui layanan.' });
+        console.error('Update Service Error:', error);
+        return res.status(500).json({ message: 'Gagal memperbarui layanan.' });
     }
 };
 
 export const deleteService = async (req: AuthRequest, res: Response) => {
-    // PERBAIKAN: Menggunakan Non-null Assertion Operator (!)
-    const id = req.params.id!;
-    const serviceId = parseInt(id);
+    const { id } = req.params;
+    const serviceId = parseInt(id || '', 10);
 
-    if (isNaN(serviceId)) {
-         return res.status(400).json({ message: 'ID layanan tidak valid.' });
-    }
+    if (isNaN(serviceId)) return res.status(400).json({ message: 'ID tidak valid.' });
 
     try {
-        await prisma.service.delete({
-            where: { id: serviceId },
-        });
-        res.status(200).json({ message: 'Layanan berhasil dihapus.' });
+        await prisma.service.delete({ where: { id: serviceId } });
+        return res.status(200).json({ message: 'Layanan berhasil dihapus.' });
     } catch (error) {
-        if ((error as any).code === 'P2025') {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
             return res.status(404).json({ message: 'Layanan tidak ditemukan.' });
         }
-        console.error('Error deleting service:', error);
-        res.status(500).json({ message: 'Gagal menghapus layanan.' });
+        console.error('Delete Service Error:', error);
+        return res.status(500).json({ message: 'Gagal menghapus layanan.' });
     }
 };
